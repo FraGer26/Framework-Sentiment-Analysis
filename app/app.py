@@ -876,7 +876,16 @@ def main():
     st.sidebar.header("Data & Control")
     
     # API Key for Topics/Evaluations
-    api_key = st.sidebar.text_input("OpenAI API Key (for Topics)", type="password", help="Required for extracting topics or generating qualitative summaries.")
+    # Priority: 1. Manual User Input, 2. Streamlit Secrets (for Cloud Deployment)
+    manual_api_key = st.sidebar.text_input("OpenAI API Key (for Topics)", type="password", help="Required for extracting topics or generating qualitative summaries.")
+    
+    # Use secrets if available as fallback
+    if manual_api_key:
+        api_key = manual_api_key
+    elif "OPENAI_API_KEY" in st.secrets:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    else:
+        api_key = ""
 
     
     # Automatic File Discovery

@@ -80,8 +80,21 @@ To launch the dashboard, run the following command from the project root:
 streamlit run app/app.py
 ```
 
-> [!TIP]
-> Ensure you have your OpenAI API key ready. You can enter it directly in the sidebar of the application.
+## ☁️ Streamlit Cloud Deployment
+
+To deploy this app to Streamlit Cloud:
+
+1. **GitHub**: Push this repository to your GitHub account (see instructions above).
+2. **Streamlit Cloud**: Sign in to [Streamlit Cloud](https://share.streamlit.io/) and click "New app".
+3. **Configuration**:
+   - **Repository**: Select your project repository.
+   - **Branch**: `main` (or `master`).
+   - **Main file path**: `app/app.py`  <-- **CRITICAL: Ensure this points to the file inside the `app` folder.**
+4. **Secrets**: Click "Advanced settings" -> "Secrets" and paste your OpenAI API key:
+   ```toml
+   OPENAI_API_KEY = "your-openai-api-key-here"
+   ```
+5. **Deploy**: Click "Deploy". Streamlit will automatically install dependencies from `requirements.txt` and handle Git LFS files.
 
 ## 🔑 Cache Management
 
