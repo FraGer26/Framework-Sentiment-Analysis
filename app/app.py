@@ -879,13 +879,16 @@ def main():
     # Priority: 1. Manual User Input, 2. Streamlit Secrets (for Cloud Deployment)
     manual_api_key = st.sidebar.text_input("OpenAI API Key (for Topics)", type="password", help="Required for extracting topics or generating qualitative summaries.")
     
-    # Use secrets if available as fallback
-    if manual_api_key:
-        api_key = manual_api_key
-    elif "OPENAI_API_KEY" in st.secrets:
-        api_key = st.secrets["OPENAI_API_KEY"]
-    else:
-        api_key = ""
+    # Use secrets if available as fallback (wrapped in try-except to avoid crash if no secrets file exists)
+    try:
+        if manual_api_key:
+            api_key = manual_api_key
+        elif "OPENAI_API_KEY" in st.secrets:
+            api_key = st.secrets["OPENAI_API_KEY"]
+        else:
+            api_key = ""
+    except:
+        api_key = manual_api_key if manual_api_key else ""
 
     
     # Automatic File Discovery
