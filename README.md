@@ -1,4 +1,4 @@
-# Reddit User Analytics Dashboard
+# Framework Sentiment Analysis Dashboard
 
 A sophisticated multi-modal analytics tool designed to evaluate and visualize user behavior, emotional trajectories, and topical interests on Reddit.
 
@@ -17,7 +17,7 @@ This application provides a comprehensive suite of tools for researchers and dat
 ## 📁 Project Structure
 
 ```text
-06 app/
+Framework Sentiment Analysis/
 ├── app/                    # Source code directory
 │   ├── app.py              # Main Streamlit application entry point
 │   ├── clustering.py       # BERTopic clustering logic
@@ -59,7 +59,7 @@ This application provides a comprehensive suite of tools for researchers and dat
 1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd "06 app"
+   cd "Framework Sentiment Analysis"
    ```
 
 2. **Install dependencies**:
