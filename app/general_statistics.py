@@ -49,15 +49,14 @@ def render_dataset_statistics(df, api_key):
     # Tabs for organization
     tab1, tab2, tab3 = st.tabs(["📊 General Overview", "🏆 Rankings & Risk", "⚖️ GPT Evaluation"])
     
+import queries # Import queries module
+
+# ... (Previous code remains, skipping to tab1 context)
+
     with tab1:
         # 1. User Metrics (Spark SQL)
         # Query: Distinct Users, Total Posts
-        metrics_df = spark.sql("""
-            SELECT 
-                count(DISTINCT `Subject ID`) as num_users,
-                count(*) as total_posts
-            FROM reddit_posts
-        """).toPandas()
+        metrics_df = spark.sql(queries.get_user_metrics_query("reddit_posts")).toPandas()
         
         num_users = metrics_df['num_users'][0]
         total_posts = metrics_df['total_posts'][0]
@@ -77,12 +76,7 @@ def render_dataset_statistics(df, api_key):
         
         if has_dep_cols:
             # Aggregate Averages via Spark
-            avgs_df = spark.sql("""
-                SELECT 
-                    avg(Prob_Severe_Depressed) as avg_severe,
-                    avg(Prob_Moderate_Depressed) as avg_moderate
-                FROM reddit_posts
-            """).toPandas()
+            avgs_df = spark.sql(queries.get_depression_averages_query("reddit_posts")).toPandas()
             
             avg_severe = avgs_df['avg_severe'][0]
             avg_moderate = avgs_df['avg_moderate'][0]
@@ -93,11 +87,7 @@ def render_dataset_statistics(df, api_key):
             c2.metric("Avg Moderate Score", f"{avg_moderate:.4f}")
             c3.metric("Avg Non-Depressed (Est.)", f"{avg_none:.4f}")
             
-            # Histogram
-            # NOTE: For Histograms, we usually need the raw data. 
-            # If data is huge, we should compute bin counts in Spark.
-            # Assuming data fits in memory for Plotly (since input `df` was Pandas), we use `df` directly for plotting to save code complexity.
-            # Pure Spark approach would be: `sdf.select("Prob_Severe_Depressed").rdd.histogram(buckets)` but Plotly handles it better.
+            # Histogram logic (unchanged)
             fig_hist = go.Figure()
             fig_hist.add_trace(go.Histogram(x=df["Prob_Severe_Depressed"], name='Severe', opacity=0.75))
             fig_hist.add_trace(go.Histogram(x=df["Prob_Moderate_Depressed"], name='Moderate', opacity=0.75))
@@ -112,15 +102,7 @@ def render_dataset_statistics(df, api_key):
         st.markdown("### 📈 Posts Volume Over Time")
         if 'Date' in df.columns:
             # Group by Month using Spark SQL
-            # date_trunc('month', Date) or format 'yyyy-MM'
-            time_df = spark.sql("""
-                SELECT 
-                    date_format(Date, 'yyyy-MM-01') as MonthDate,
-                    count(*) as Posts
-                FROM reddit_posts
-                GROUP BY 1
-                ORDER BY 1
-            """).toPandas()
+            time_df = spark.sql(queries.get_posts_over_time_query("reddit_posts")).toPandas()
             
             fig_time = go.Figure(data=[go.Bar(x=time_df['MonthDate'], y=time_df['Posts'], name='Posts')])
             fig_time.update_layout(xaxis_title="Date", yaxis_title="Number of Posts", template="plotly_white")
@@ -132,13 +114,7 @@ def render_dataset_statistics(df, api_key):
         with col_stats_1:
              st.markdown("### 📝 Top 10 Users by Activity")
              # Spark SQL Ranking
-             top_activity = spark.sql("""
-                SELECT `Subject ID` as User_ID, count(*) as Post_Count
-                FROM reddit_posts
-                GROUP BY `Subject ID`
-                ORDER BY Post_Count DESC
-                LIMIT 10
-             """).toPandas()
+             top_activity = spark.sql(queries.get_top_active_users_query("reddit_posts")).toPandas()
              
              st.table(top_activity.set_index("User_ID"))
         
