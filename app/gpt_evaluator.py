@@ -86,8 +86,7 @@ def get_aggregate_stats():
             rows.append({
                 "Criterion": crit.replace("_", " "),
                 "Avg Score (Base)": f"{avg_base:.2f}",
-                "Avg Score (Trajectory)": f"{avg_traj:.2f}",
-                "Delta": f"{(avg_traj - avg_base):.2f}"
+                "Avg Score (Trajectory)": f"{avg_traj:.2f}"
             })
             
     df = pd.DataFrame(rows)

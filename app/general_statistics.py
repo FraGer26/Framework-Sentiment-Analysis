@@ -5,6 +5,7 @@ import os
 import data
 import ema
 import gpt_evaluator
+import queries
 
 # --- Spark Integration ---
 # We initialize Spark strictly when needed to avoid overhead if not used.
@@ -22,72 +23,114 @@ def get_spark_session():
         .master("local[*]") \
         .config("spark.driver.memory", "4g") \
         .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
+        .config("spark.executor.heartbeatInterval", "100s") \
+        .config("spark.network.timeout", "300s") \
         .getOrCreate()
 
 def render_dataset_statistics(df, api_key):
     st.subheader("🌍 Global Dataset Statistics (Powered by Spark SQL)")
     
-    # 0. Convert Payload to Spark
-    # Only if it's substantial, otherwise this adds overhead. 
-    # But for the assignment "Convert to Spark", we do it.
-    spark = get_spark_session()
+    # --- Cache Paths ---
+    cache_metrics_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_metrics.json")
+    cache_avgs_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_avgs.json")
+    cache_time_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_time.json")
+    cache_top_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_top_users.json")
     
-    # Clean column names for Spark compatibility (no spaces ideally, but we'll quote them)
-    # df columns: ['Subject ID', 'Chunk', 'Date', 'Title', 'Info', 'Text', 'Label_User', ...]
-    # We force string conversion for object types to ensure Arrow compatibility
-    df_clean = df.copy()
-    if 'Date' in df_clean.columns:
-        df_clean['Date'] = df_clean['Date'].astype(str) # Pass as string, cast in Spark
+    # Check if caches exist
+    caches_exist = (
+        os.path.exists(cache_metrics_path) and 
+        os.path.exists(cache_avgs_path) and 
+        os.path.exists(cache_time_path) and 
+        os.path.exists(cache_top_path)
+    )
     
-    # Create Spark DF
-    sdf = spark.createDataFrame(df_clean)
-    sdf = sdf.withColumn("Date", to_date(col("Date"))) # Cast back to Date
+    recalc = st.button("🔄 Recalculate Global Statistics")
     
-    # Create Temp View for SQL access
-    sdf.createOrReplaceTempView("reddit_posts")
+    metrics_df = None
+    avgs_df = None
+    time_df = None
+    top_activity = None
+    
+    if caches_exist and not recalc:
+        try:
+            metrics_df = pd.read_json(cache_metrics_path)
+            avgs_df = pd.read_json(cache_avgs_path)
+            time_df = pd.read_json(cache_time_path).sort_values("MonthDate") # JSON might lose order
+            top_activity = pd.read_json(cache_top_path)
+            st.success("Loaded statistics from cache.")
+        except Exception as e:
+            st.warning(f"Cache load failed: {e}. Recalculating...")
+            caches_exist = False
+
+    if not caches_exist or recalc:
+        with st.spinner("Initializing Spark and calculating statistics... (This may take a moment)"):
+             # 0. Convert Payload to Spark
+             spark = get_spark_session()
+             
+             # Clean column names for Spark compatibility
+             df_clean = df.copy()
+             if 'Date' in df_clean.columns:
+                 df_clean['Date'] = df_clean['Date'].astype(str)
+             
+             # Create Spark DF
+             sdf = spark.createDataFrame(df_clean)
+             sdf = sdf.withColumn("Date", to_date(col("Date")))
+             
+             # 1. User Metrics
+             metrics_df = queries.get_user_metrics_df(sdf).toPandas()
+             metrics_df.to_json(cache_metrics_path)
+             
+             # 2. Depression Averages
+             if "Prob_Severe_Depressed" in df.columns:
+                 avgs_df = queries.get_depression_averages_df(sdf).toPandas()
+                 avgs_df.to_json(cache_avgs_path)
+             
+             # 3. Posts Over Time
+             if 'Date' in df.columns:
+                 time_df = queries.get_posts_over_time_df(sdf).toPandas()
+                 time_df.to_json(cache_time_path)
+                 
+             # 4. Top Active Users
+             top_activity = queries.get_top_active_users_df(sdf).toPandas()
+             top_activity.to_json(cache_top_path)
+             
+             st.success("Statistics calculated and cached.")
+             # Rerun to pick up cached values cleanly if needed, or just proceed
     
     # Tabs for organization
     tab1, tab2, tab3 = st.tabs(["📊 General Overview", "🏆 Rankings & Risk", "⚖️ GPT Evaluation"])
     
     with tab1:
-        # 1. User Metrics (Spark SQL)
-        # Query: Distinct Users, Total Posts
-        metrics_df = spark.sql(queries.get_user_metrics_query("reddit_posts")).toPandas()
-        
-        num_users = metrics_df['num_users'][0]
-        total_posts = metrics_df['total_posts'][0]
-        avg_posts_user = total_posts / num_users if num_users > 0 else 0
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Users", f"{num_users}")
-        col2.metric("Total Posts", f"{total_posts}")
-        col3.metric("Avg Posts/User", f"{avg_posts_user:.1f}")
+        # 1. User Metrics
+        if metrics_df is not None and not metrics_df.empty:
+            num_users = metrics_df['num_users'][0]
+            total_posts = metrics_df['total_posts'][0]
+            avg_posts_user = total_posts / num_users if num_users > 0 else 0
+            
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Total Users", f"{num_users}")
+            col2.metric("Total Posts", f"{total_posts}")
+            col3.metric("Avg Posts/User", f"{avg_posts_user:.1f}")
         
         st.markdown("---")
         
-        # 2. Depression Probability Distribution (Spark SQL)
+        # 2. Depression Probability Distribution
         st.markdown("### Depression Probability (Dataset-wide)")
         
         has_dep_cols = "Prob_Severe_Depressed" in df.columns and "Prob_Moderate_Depressed" in df.columns
         
         if has_dep_cols:
-            # Aggregate Averages via Spark
-            avgs_df = spark.sql(queries.get_depression_averages_query("reddit_posts")).toPandas()
+            if avgs_df is not None and not avgs_df.empty:
+                avg_severe = avgs_df['avg_severe'][0]
+                avg_moderate = avgs_df['avg_moderate'][0]
+                avg_none = 1.0 - (avg_severe + avg_moderate)
+                
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Avg Severe Score", f"{avg_severe:.4f}")
+                c2.metric("Avg Moderate Score", f"{avg_moderate:.4f}")
+                c3.metric("Avg Non-Depressed (Est.)", f"{avg_none:.4f}")
             
-            avg_severe = avgs_df['avg_severe'][0]
-            avg_moderate = avgs_df['avg_moderate'][0]
-            avg_none = 1.0 - (avg_severe + avg_moderate)
-            
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Avg Severe Score", f"{avg_severe:.4f}")
-            c2.metric("Avg Moderate Score", f"{avg_moderate:.4f}")
-            c3.metric("Avg Non-Depressed (Est.)", f"{avg_none:.4f}")
-            
-            # Histogram
-            # NOTE: For Histograms, we usually need the raw data. 
-            # If data is huge, we should compute bin counts in Spark.
-            # Assuming data fits in memory for Plotly (since input `df` was Pandas), we use `df` directly for plotting to save code complexity.
-            # Pure Spark approach would be: `sdf.select("Prob_Severe_Depressed").rdd.histogram(buckets)` but Plotly handles it better.
+            # Histogram (Using raw DF for plotting as before, fast enough)
             fig_hist = go.Figure()
             fig_hist.add_trace(go.Histogram(x=df["Prob_Severe_Depressed"], name='Severe', opacity=0.75))
             fig_hist.add_trace(go.Histogram(x=df["Prob_Moderate_Depressed"], name='Moderate', opacity=0.75))
@@ -98,12 +141,9 @@ def render_dataset_statistics(df, api_key):
 
         st.markdown("---")
         
-        # 3. Activity Over Time (Spark SQL)
+        # 3. Activity Over Time
         st.markdown("### 📈 Posts Volume Over Time")
-        if 'Date' in df.columns:
-            # Group by Month using Spark SQL
-            time_df = spark.sql(queries.get_posts_over_time_query("reddit_posts")).toPandas()
-            
+        if 'Date' in df.columns and time_df is not None:
             fig_time = go.Figure(data=[go.Bar(x=time_df['MonthDate'], y=time_df['Posts'], name='Posts')])
             fig_time.update_layout(xaxis_title="Date", yaxis_title="Number of Posts", template="plotly_white")
             st.plotly_chart(fig_time, use_container_width=True)
@@ -113,10 +153,8 @@ def render_dataset_statistics(df, api_key):
         
         with col_stats_1:
              st.markdown("### 📝 Top 10 Users by Activity")
-             # Spark SQL Ranking
-             top_activity = spark.sql(queries.get_top_active_users_query("reddit_posts")).toPandas()
-             
-             st.table(top_activity.set_index("User_ID"))
+             if top_activity is not None:
+                 st.table(top_activity.set_index("User_ID"))
         
         with col_stats_2:
              # 4. Top Risky Users (EMA Based) - Cached
@@ -133,13 +171,24 @@ def render_dataset_statistics(df, api_key):
                  except:
                       pass
              
-             # --- Spark Parallelized Calculation ---
+             # --- Spark Parallelized Calculation (Only if needed) ---
              def perform_calculation_spark():
+                 # Re-init spark here if needed, but optimally we pass 'sdf' if we had it.
+                 # Since 'sdf' might not be created if we hit cache above, we need to ensure spark is ready.
+                 spark = get_spark_session()
+                 # Re-create SDF for this specific calculation if not present. 
+                 # This is a bit inefficient if we just calculated above, but cleaner for separation.
+                 # To optimize, we could store 'sdf' in session state or re-use logic.
+                 # For now, let's just recreate logic.
+                 df_clean_local = df.copy()
+                 if 'Date' in df_clean_local.columns:
+                     df_clean_local['Date'] = df_clean_local['Date'].astype(str)
+                 sdf_local = spark.createDataFrame(df_clean_local)
+                 sdf_local = sdf_local.withColumn("Date", to_date(col("Date")))
+
                  with st.spinner("Calculating risk scores (Parallelized with Spark)..."):
                     
                      # Define the Pandas UDF Schema
-                     # Input: DataFrame for one user
-                     # Output: DataFrame with 1 row (User ID, Current, Avg, Peak)
                      result_schema = StructType([
                          StructField("User ID", StringType(), True),
                          StructField("Current Risk", FloatType(), True),
@@ -148,22 +197,15 @@ def render_dataset_statistics(df, api_key):
                      ])
                      
                      def calculate_risk_udf(pdf):
-                         # pdf is a pandas dataframe for a single user
                          if pdf.empty: 
                              return pd.DataFrame(columns=["User ID", "Current Risk", "Avg Risk (EMA)", "Peak Risk"])
-                             
                          uid = str(pdf["Subject ID"].iloc[0])
-                         
-                         # Call existing logic (which handles internal caching per user)
                          r_series = ema.calculate_risk_score(pdf, half_life=15)
-                         
                          if r_series.empty:
                              return pd.DataFrame(columns=["User ID", "Current Risk", "Avg Risk (EMA)", "Peak Risk"])
-                             
                          curr_risk = float(r_series.iloc[-1])
                          avg_risk = float(r_series.mean())
                          max_risk = float(r_series.max())
-                         
                          return pd.DataFrame([{
                              "User ID": uid,
                              "Current Risk": curr_risk,
@@ -171,27 +213,18 @@ def render_dataset_statistics(df, api_key):
                              "Peak Risk": max_risk
                          }])
 
-                     # Apply to Spark DF
-                     results_sdf = sdf.groupBy("Subject ID").applyInPandas(calculate_risk_udf, schema=result_schema)
-                     
-                     # Sort and Take Top 20 (Action)
-                     # We move sorting to Spark side before collecting
+                     results_sdf = sdf_local.groupBy("Subject ID").applyInPandas(calculate_risk_udf, schema=result_schema)
                      top_risky = results_sdf.orderBy(desc("Current Risk")).limit(20).toPandas()
-                     
-                     # Save to disk
                      top_risky.to_json(cache_path)
                      return top_risky
      
-             # Logic: If cached, show. If button, calc.
              if cached_df is not None:
                   disp_df = cached_df.head(10).copy()
                   cols_to_fmt = ["Current Risk", "Avg Risk (EMA)", "Peak Risk"]
                   for c in cols_to_fmt:
                       if c in disp_df.columns:
                           disp_df[c] = disp_df[c].astype(float).map("{:.4f}".format)
-                  
                   st.table(disp_df.set_index("User ID"))
-                  
              else:
                  if st.button("Calculate Risk Rankings"):
                      new_df = perform_calculation_spark()

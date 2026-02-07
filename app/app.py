@@ -418,9 +418,7 @@ def render_topic_coverage(selected_user):
                 # Show only matches
                 st.dataframe(df_matches[df_matches['matched'] == True], use_container_width=True)
                 
-                st.write("#### Missed (Ref Topics NOT covered)")
-                missed = df_matches[df_matches['matched'] == False]['full_topic'].tolist()
-                st.write(missed)
+
 
 def render_clustering_section(selected_user, user_data):
     # Subheader removed
@@ -732,7 +730,7 @@ def main():
         st.error("Failed to load data.")
         st.stop()
         
-    analysis_mode = st.sidebar.radio("Analysis Level", ["🌍 Global Dataset Stats", "👤 Single User Analysis"])
+    analysis_mode = st.sidebar.radio("Analysis Level", ["👤 Single User Analysis", "🌍 Global Dataset Stats"])
     st.sidebar.markdown("---")
 
     if analysis_mode == "🌍 Global Dataset Stats":
