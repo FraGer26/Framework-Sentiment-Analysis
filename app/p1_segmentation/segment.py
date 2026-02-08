@@ -2,7 +2,7 @@ import numpy as np
 import streamlit as st
 import os
 import json
-import data
+from p0_global import data
 
 # --- 3. Logica Segmentazione (Top-Down Piecewise Linear) ---
 def point_line_distance(x0, y0, x1, y1, x2, y2):

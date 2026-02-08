@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import os
-import data
-import general_statistics
+from p0_global import data, general_statistics
 import gpt_evaluator
 
 def render_dataset_statistics(df, api_key):

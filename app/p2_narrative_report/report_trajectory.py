@@ -3,7 +3,7 @@ import numpy as np
 import os
 import json
 from openai import OpenAI
-import data
+from p0_global import data
 
 TRAJECTORY_REPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache", "reports", "trajectory")
 

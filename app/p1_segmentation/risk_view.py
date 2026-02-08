@@ -1,4 +1,6 @@
 import streamlit as st
+from p0_global import data
+from p1_segmentation import ema, segment
 import plotly.graph_objects as go
 import pandas as pd
 

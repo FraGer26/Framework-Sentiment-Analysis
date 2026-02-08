@@ -1,7 +1,6 @@
 import streamlit as st
-import topic_model
-import report_base
-import report_trajectory
+from p2_narrative_report import report_base, report_trajectory
+from p4_topic_analysis import topic_model
 import os
 import json
 

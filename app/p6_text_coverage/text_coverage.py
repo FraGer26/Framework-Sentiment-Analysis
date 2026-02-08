@@ -5,7 +5,7 @@ import streamlit as st
 import os
 import json
 import hashlib
-from embedding_utils import get_model, embed_texts
+from p6_text_coverage.embedding_utils import get_model, embed_texts
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache", "coverage")
 

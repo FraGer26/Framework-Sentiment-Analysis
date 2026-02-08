@@ -1,6 +1,6 @@
 import streamlit as st
-import clustering
-import topic_model
+from p7_topic_analysis_clustering import clustering
+from p4_topic_analysis import topic_model
 import json
 import os
 

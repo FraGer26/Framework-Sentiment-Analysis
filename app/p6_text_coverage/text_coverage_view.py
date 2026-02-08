@@ -1,7 +1,6 @@
 import streamlit as st
-import report_base
-import report_trajectory
-import text_coverage
+from p2_narrative_report import report_base, report_trajectory
+from p6_text_coverage import text_coverage
 import plotly.graph_objects as go
 
 def render_text_coverage(selected_user, user_data):

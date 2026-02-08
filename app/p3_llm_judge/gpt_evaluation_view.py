@@ -1,7 +1,6 @@
 import streamlit as st
-import report_base
-import report_trajectory
-import gpt_evaluator
+from p2_narrative_report import report_base, report_trajectory
+from p3_llm_judge import gpt_evaluator
 import os
 import pandas as pd
 

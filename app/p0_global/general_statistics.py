@@ -1,8 +1,7 @@
 import pandas as pd
 import os
-import data
-import ema
-import queries
+from p0_global import data, queries
+from p1_segmentation import ema
 
 # --- Integrazione Spark ---
 # Inizializzazione Spark lazy

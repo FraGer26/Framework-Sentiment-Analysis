@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
+from p0_global import data, general_statistics
 
 def render_global_overview(user_data):
     st.subheader("User Activity Timeline")

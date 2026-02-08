@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-import data
+from p0_global import data
 import os
 import json
 

@@ -1,6 +1,6 @@
 import streamlit as st
-import topic_model
-import topic_coverage
+from p5_topic_coverage import topic_coverage
+from p4_topic_analysis import topic_model
 import os
 import json
 

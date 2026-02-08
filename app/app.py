@@ -1,22 +1,14 @@
 import streamlit as st
 import pandas as pd
 import os
-import data
-import ema
-import segment
-
-# Moduli GUI
-from gui import (
-    overview,
-    risk,
-    trajectory,
-    topic_analysis,
-    topic_coverage_view,
-    text_coverage_view,
-    clustering_view,
-    gpt_evaluation,
-    dataset_stats
-)
+from p0_global import data, dataset_stats_view, overview_view
+from p1_segmentation import ema, segment, risk_view
+from p2_narrative_report import trajectory_view, report_base, report_trajectory
+from p3_llm_judge import gpt_evaluation_view
+from p4_topic_analysis import topic_analysis_view
+from p5_topic_coverage import topic_coverage_view
+from p6_text_coverage import text_coverage_view
+from p7_topic_analysis_clustering import clustering_view
 
 # --- Configurazione ---
 st.set_page_config(
@@ -77,7 +69,7 @@ def main():
     st.sidebar.markdown("---")
 
     if analysis_mode == "🌍 Statistiche Globali Dataset":
-        dataset_stats.render_dataset_statistics(df, api_key)
+        dataset_stats_view.render_dataset_statistics(df, api_key)
         
     else: # Analisi Utente Singolo
         # Selezione Utente (in cache)
@@ -164,20 +156,20 @@ def main():
     
         
         if analysis_section == "👤 Panoramica Utente":
-            overview.render_global_overview(user_data)
+            overview_view.render_global_overview(user_data)
             
         elif analysis_section == "📊 Dashboard Rischio":
             # Passa dati pre-calcolati
-            risk.render_risk_dashboard(user_data, risk_series, segments, half_life)
+            risk_view.render_risk_dashboard(user_data, risk_series, segments, half_life)
         
         elif analysis_section == "📖 Traiettoria Narrativa":
-            trajectory.render_trajectory_section(selected_user, user_data, segments, api_key)
+            trajectory_view.render_trajectory_section(selected_user, user_data, segments, api_key)
     
         elif analysis_section == "⚖️ Valutazione GPT":
-            gpt_evaluation.render_gpt_evaluation(selected_user, api_key)
+            gpt_evaluation_view.render_gpt_evaluation(selected_user, api_key)
     
         elif analysis_section == "🧩 Analisi Argomenti":
-            topic_analysis.render_topic_analysis(selected_user, user_data, api_key)
+            topic_analysis_view.render_topic_analysis(selected_user, user_data, api_key)
     
         elif analysis_section == "🧩 Copertura Argomenti":
             topic_coverage_view.render_topic_coverage(selected_user)
