@@ -6,13 +6,13 @@ from openai import OpenAI
 import hashlib
 import pandas as pd
 
-# Cache directory for evaluations
+# Directory cache per valutazioni
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache", "evaluations")
 
 def get_aggregate_stats():
     """
-    Aggregates statistics from all cached evaluations.
-    Returns a dict with DataFrame and summary counts.
+    Aggrega statistiche da tutte le valutazioni in cache. 
+    Restituisce un dict con DataFrame e conteggi sommario.
     """
     if not os.path.exists(CACHE_DIR):
         return None
@@ -22,7 +22,7 @@ def get_aggregate_stats():
     if not files:
         return None
         
-    # Stats accumulation
+    # Accumulo statistiche
     stats = {}
     total_evals = 0
     preference_counts = {"Base": 0, "Trajectory": 0, "Tie": 0}
@@ -41,16 +41,16 @@ def get_aggregate_stats():
                 
             total_evals += 1
             
-            # Identify Report IDs
+            # Identifica ID Report
             # mapping: { "A": "base", "B": "trajectory" }
             id_base = "A" if mapping.get("A") == "base" else "B"
             id_traj = "A" if mapping.get("A") == "trajectory" else "B"
             
-            # Scores
+            # Punteggi
             scores_base = result.get(f"Report_{id_base}", {})
             scores_traj = result.get(f"Report_{id_traj}", {})
             
-            # Preference
+            # Preferenza
             pref = result.get("Preferred_Report", "Tie")
             if pref == id_base:
                 preference_counts["Base"] += 1
@@ -59,7 +59,7 @@ def get_aggregate_stats():
             else:
                 preference_counts["Tie"] += 1
             
-            # Iterate criteria
+            # Itera criteri
             for criteria in scores_base.keys():
                 if criteria not in stats:
                     stats[criteria] = {"Base_Sum": 0, "Traj_Sum": 0, "Count": 0}
@@ -75,7 +75,7 @@ def get_aggregate_stats():
     if total_evals == 0:
         return None
         
-    # Build DataFrame
+    # Costruisci DataFrame
     rows = []
     for crit, val in stats.items():
         count = val["Count"]
@@ -114,13 +114,13 @@ def load_qualitative_summary():
 
 def generate_qualitative_summary(api_key):
     """
-    Generates a qualitative summary of all evaluations using LLM.
-    Aggregates all JSONs in cache and asks for a comparative summary.
+    Genera un sommario qualitativo di tutte le valutazioni usando LLM. 
+    Aggrega tutti i JSON in cache e chiede un sommario comparativo.
     """
     if not os.path.exists(CACHE_DIR):
         return None
         
-    # Load all evaluation files
+    # Carica tutti i file di valutazione
     files = [f for f in os.listdir(CACHE_DIR) if f.startswith("eval_") and f.endswith(".json")]
     all_judge_data = []
     
@@ -130,8 +130,7 @@ def generate_qualitative_summary(api_key):
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # We only need the result part usually, or the whole thing?
-                # The notebook loads the whole json.
+                # Di solito serve solo la parte risultato, o tutto? Il notebook carica tutto il json.
                 all_judge_data.append(data)
         except:
             pass
@@ -139,12 +138,11 @@ def generate_qualitative_summary(api_key):
     if not all_judge_data:
         return None
         
-    # Build Prompt
+    # Costruisci Prompt
     json_str = json.dumps(all_judge_data, indent=2)
     
-    # Truncate if too long? 10 files might be fine, but 100 might hit context limits.
-    # For now assume it fits or simple truncation.
-    if len(json_str) > 100000: # Safe guard roughly
+    # Tronca se troppo lungo? 100 file potrebbero superare limiti contesto. Per ora assumiamo che stia dentro o troncatura semplice.
+    if len(json_str) > 100000: # Protezione approssimativa
         json_str = json_str[:100000] + "... (truncated)"
         
     prompt = f"""
@@ -183,7 +181,7 @@ def generate_qualitative_summary(api_key):
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4o", # Used gpt-5.1 in notebook, using gpt-4o as standard high quality or fallback to user pref
+            model="gpt-5.1", # Used gpt-5.1 in notebook, using gpt-4o as standard high quality or fallback to user pref
             messages=[
                 {"role": "system", "content": "You are an expert analyst of evaluation reports."},
                 {"role": "user", "content": prompt}
@@ -194,7 +192,7 @@ def generate_qualitative_summary(api_key):
         content = response.choices[0].message.content
         result_json = json.loads(content)
         
-        # Save to Cache
+        # Salva in Cache
         cache_path = get_summary_cache_path()
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(result_json, f, indent=4)
@@ -205,31 +203,31 @@ def generate_qualitative_summary(api_key):
         st.error(f"Error generating summary: {e}")
         return None
 def get_cache_path(user_id, report_base, report_traj):
-    # User requested to name the file after the user_id
+    # L'utente ha richiesto di nominare il file con lo user_id
 
     filename = f"eval_{user_id}.json"
     return os.path.join(CACHE_DIR, filename)
 
 def evaluate_reports(user_id, report_base, report_traj, api_key):
     """
-    Evaluates two reports (Base vs Trajectory) using a blind A/B test with an LLM Judge.
-    Returns the raw JSON response and the mapping used.
+    Valuta due report (Base vs Traiettoria) usando un test A/B cieco con un Giudice LLM.
+    Restituisce la risposta JSON grezza e la mappatura usata.
     """
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
         
     cache_path = get_cache_path(user_id, report_base, report_traj)
     
-    # Check Cache
+    # Controlla Cache
     if os.path.exists(cache_path):
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
                 cached_data = json.load(f)
             return cached_data["result"], cached_data["mapping"]
         except:
-            pass # If cache read fails, proceed to re-run
+            pass # Se lettura cache fallisce, procedi a rieseguire
     
-    # Randomize A/B
+    # Randomizza A/B
     if random.random() < 0.5:
         report_A = report_base
         report_B = report_traj
@@ -333,10 +331,10 @@ REPORT B:
         content = response.choices[0].message.content
         result_json = json.loads(content)
         
-        # Inject mapping into result for transparency if needed (but UI uses returned mapping)
+        # Inserisci mappatura nel risultato per trasparenza se necessario (ma UI usa mappatura restituita)
         result_json["Report_Mapping"] = mapping
         
-        # Save to Cache
+        # Salva in Cache
         cache_data = {
             "result": result_json,
             "mapping": mapping

@@ -113,8 +113,8 @@ def ask_phase(posts, timestamps, mean_score, breaks, client):
     phases = []
 
     for i in range(len(breaks) - 1):
-        # NOTE: In notebook it accesses breaks['Date'][i], assuming integer indexing works or it's a list.
-        # breaks here is a DataFrame. use .iloc for caution if index is not 0..N, but generated df has default index.
+        # NOTA: Nel notebook accede a breaks['Date'][i], assumendo indicizzazione intera o lista.
+        # breaks qui è un DataFrame. usa .iloc per cautela se index non è 0..N, ma df generato ha index default.
         start_date = pd.to_datetime(breaks['Date'].iloc[i])
         end_date = pd.to_datetime(breaks['Date'].iloc[i+1])
         
@@ -122,13 +122,13 @@ def ask_phase(posts, timestamps, mean_score, breaks, client):
         posts_in_phase = posts[mask]
         timestamps_in_phase = timestamps[mask]
         
-        # NOTE: Notebook uses breaks['score_smooth'][i]
+        # NOTA: Il notebook usa breaks['score_smooth'][i]
         delta = float(breaks['score_smooth'].iloc[i+1] - breaks['score_smooth'].iloc[i])
         
-        # NOTE: Notebook calls build_prompt_trajectory with 5 args
-        # In notebook: build_prompt_trajectory(posts.tolist(), timestamps.tolist(), mean_score, i+1, delta)
-        # We need to match this.
-        # mean_score in notebook is the full series.
+        # NOTA: Il notebook chiama build_prompt_trajectory con 5 argomenti
+        # Nel notebook: build_prompt_trajectory(posts.tolist(), timestamps.tolist(), mean_score, i+1, delta)
+        # Dobbiamo corrispondere a questo.
+        # mean_score nel notebook è la serie completa.
         prompt_trajectory = build_prompt_trajectory(posts_in_phase.tolist(), 
                                                     timestamps_in_phase.tolist(),
                                                     mean_score, i+1, delta)
@@ -146,12 +146,12 @@ def ask_trajectory_summary(list_of_phase, client):
 
 def generate_trajectory_report(user_id, user_df, segments, api_key, output_txt_path=None):
     """
-    Generates Phase-by-Phase and Overall Summary. Saves to JSON cache and optionally TXT.
+    Genera Fase-per-Fase e Sommario Generale. Salva in cache JSON e opzionalmente TXT.
     """
     if not os.path.exists(TRAJECTORY_REPORT_DIR):
         os.makedirs(TRAJECTORY_REPORT_DIR, exist_ok=True)
         
-    # 1. Check Cache
+    # 1. Controlla Cache
     cached = load_trajectory_report(user_id)
     if cached:
         return cached, True
@@ -161,31 +161,31 @@ def generate_trajectory_report(user_id, user_df, segments, api_key, output_txt_p
 
     client = OpenAI(api_key=api_key)
     
-    # --- Prepare Data to match Notebook inputs ---
+    # --- Prepara Dati per corrispondere input Notebook ---
     
-    # 1. posts and timestamps
+    # 1. post e timestamp
     posts = user_df["Text"]
     timestamps = user_df["Date"]
     
-    # 2. mean_score (Daily means)
-    # Using data.calculate_daily_risk to mimic notebook's aggregation
+    # 2. mean_score (Medie giornaliere)
+    # Usa data.calculate_daily_risk per mimare l'aggregazione del notebook
     # Notebook: mean_score = df.groupby("Date")["mean_score"].mean().sort_index()
-    # verify user_df columns first
+    # verifica prima colonne user_df
     mean_score = pd.Series(dtype=float)
     if 'Prob_Severe_Depressed' in user_df.columns and 'Prob_Moderate_Depressed' in user_df.columns:
-        # data.calculate_daily_risk returns Series indexed by Date, values are means
+        # data.calculate_daily_risk restituisce Series indicizzata per Data, valori sono medie
         mean_score = data.calculate_daily_risk(user_df)
 
-    # 3. breaks (DataFrame with 'Date' and 'score_smooth')
-    # Use segments list to reconstruct the 'breaks' structure
+    # 3. breaks (DataFrame con 'Date' e 'score_smooth')
+    # Usa lista segmenti per ricostruire la struttura 'breaks'
     breaks_data = []
     if segments:
-        # First point (start of first segment)
+        # Primo punto (inizio del primo segmento)
         breaks_data.append({
             'Date': segments[0]['start_date'],
             'score_smooth': segments[0]['start_val']
         })
-        # Subsequent points (end of each segment)
+        # Punti successivi (fine di ogni segmento)
         for seg in segments:
             breaks_data.append({
                 'Date': seg['end_date'],
@@ -194,7 +194,7 @@ def generate_trajectory_report(user_id, user_df, segments, api_key, output_txt_p
             
     breaks = pd.DataFrame(breaks_data)
     
-    # --- Execution ---
+    # --- Esecuzione ---
     
     results = {}
     phase_narratives = []
@@ -202,11 +202,11 @@ def generate_trajectory_report(user_id, user_df, segments, api_key, output_txt_p
     
     try:
         if not breaks.empty and len(breaks) > 1:
-            # Call ask_phase exactly as in notebook (adapted for client arg)
+            # Chiama ask_phase esattamente come nel notebook (adattato per arg client)
             phase_narratives = ask_phase(posts, timestamps, mean_score, breaks, client)
             
-            # Reconstruct phase_details for App UI from the narratives and segments
-            # We assume 1-to-1 mapping between segments and phases generated
+            # Ricostruisci phase_details per UI App dalle narrative e segmenti
+            # Assumiamo mappatura 1-a-1 tra segmenti e fasi generate
             for idx, narrative in enumerate(phase_narratives):
                 if idx < len(segments):
                     seg = segments[idx]
@@ -221,7 +221,7 @@ def generate_trajectory_report(user_id, user_df, segments, api_key, output_txt_p
              phase_narratives = []
              phase_details = []
 
-        # Call ask_summary
+        # Chiama ask_summary
         trajectory_summary = ask_trajectory_summary(phase_narratives, client)
         
         results = {
@@ -235,11 +235,11 @@ def generate_trajectory_report(user_id, user_df, segments, api_key, output_txt_p
             'trajectory_summary': f"Error generating report: {e}"
         }
 
-    # Save to JSON Cache
+    # Salva in Cache JSON
     with open(get_trajectory_path(user_id), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=4)
         
-    # Optional TXT save (logic from notebook)
+    # Salvataggio TXT opzionale (logica dal notebook)
     if output_txt_path:
         with open(output_txt_path, "w", encoding="utf-8") as f:
             for item in phase_narratives:

@@ -1,12 +1,13 @@
 """
-Centralized repository for Spark SQL queries used in the application.
-Refactored to use PySpark DataFrame API.
+Repository centralizzato per query Spark SQL usate nell'applicazione.
+Rifattorizzato per usare l'API PySpark DataFrame.
 """
 from pyspark.sql.functions import count, countDistinct, avg, date_format, col, desc
+from pyspark.sql.types import StructType, StructField, StringType, FloatType
 
 def get_user_metrics_df(df):
     """
-    Returns DataFrame with total users and total posts.
+    Restituisce DataFrame con totale utenti e totale post.
     """
     return df.agg(
         countDistinct("Subject ID").alias("num_users"),
@@ -15,7 +16,7 @@ def get_user_metrics_df(df):
 
 def get_depression_averages_df(df):
     """
-    Returns DataFrame with average depression risks.
+    Restituisce DataFrame con rischi medi di depressione.
     """
     return df.agg(
         avg("Prob_Severe_Depressed").alias("avg_severe"),
@@ -24,7 +25,7 @@ def get_depression_averages_df(df):
 
 def get_posts_over_time_df(df):
     """
-    Returns DataFrame with posts count grouped by month.
+    Restituisce DataFrame con conteggio post raggruppati per mese.
     """
     return df.withColumn("MonthDate", date_format("Date", 'yyyy-MM-01')) \
              .groupBy("MonthDate") \
@@ -33,7 +34,7 @@ def get_posts_over_time_df(df):
 
 def get_top_active_users_df(df, limit=10):
     """
-    Returns DataFrame with top users by post count.
+    Restituisce DataFrame con utenti top per numero di post.
     """
     return df.groupBy(col("Subject ID").alias("User_ID")) \
              .agg(count("*").alias("Post_Count")) \

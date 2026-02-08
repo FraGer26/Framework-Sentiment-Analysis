@@ -3,7 +3,7 @@ import os
 import json
 from openai import OpenAI
 
-# Cache directory for base reports
+# Directory cache per report base
 BASE_REPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache", "reports", "base")
 
 def get_base_report_path(user_id):
@@ -50,7 +50,7 @@ def ask_chatgpt(client, prompt):
 
 def ask_base(posts, timestamps, client):
     """
-    Mimics the base generation cell.
+    Mimica la cella di generazione base.
     """
     # Notebook:
     # prompt_base = build_prompt_base(posts, timestamps)
@@ -61,12 +61,12 @@ def ask_base(posts, timestamps, client):
 
 def generate_base_report(user_id, user_df, api_key, output_txt_path=None):
     """
-    Generates the Base Report. Saves to JSON cache and optionally TXT.
+    Genera il Report Base. Salva in cache JSON e opzionalmente TXT.
     """
     if not os.path.exists(BASE_REPORT_DIR):
         os.makedirs(BASE_REPORT_DIR, exist_ok=True)
         
-    # 1. Check Cache
+    # 1. Controlla Cache
     cached = load_base_report(user_id)
     if cached:
         return cached, True
@@ -76,13 +76,13 @@ def generate_base_report(user_id, user_df, api_key, output_txt_path=None):
 
     client = OpenAI(api_key=api_key)
     
-    # 2. Prepare Data (match notebook variables)
+    # 2. Prepara Dati (corrispondenza variabili notebook)
     posts = user_df["Text"]
     timestamps = user_df["Date"]
     
     try:
-        # 3. Ask base (Mimics cell 227)
-        # We need to handle potential errors, though notebook doesn't show explicit error handling block for this cell.
+        # 3. Chiedi base (Mimica cella 227)
+        # Dobbiamo gestire potenziali errori, anche se il notebook non mostra blocchi espliciti per questa cella.
         base_analysis = ask_base(posts, timestamps, client)
         
         results = {
@@ -94,11 +94,11 @@ def generate_base_report(user_id, user_df, api_key, output_txt_path=None):
             'base_analysis': f"Error generating base report: {e}"
         }
 
-    # Save to JSON Cache
+    # Salva in Cache JSON
     with open(get_base_report_path(user_id), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=4)
         
-    # Optional TXT save (Notebook saves simply as text file)
+    # Salvataggio TXT opzionale (Notebook salva semplicemente come file di testo)
     if output_txt_path:
         with open(output_txt_path, "w", encoding="utf-8") as f:
             f.write(results['base_analysis'])

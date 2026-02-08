@@ -50,25 +50,25 @@ Do not include comments, explanations, or quotations outside the dictionary.
 
 def extract_topics(user_id, text, api_key, source_type="posts"):
     """
-    Extracts topics for a given user using OpenAI API.
-    Checks cache first based on source_type.
+    Estrae argomenti per un dato utente usando OpenAI API.
+    Controlla prima la cache basandosi su source_type.
     """
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
     
-    # Cache file name includes source type to separate results
+    # Il nome del file cache include il tipo sorgente per separare i risultati
     cache_file = os.path.join(CACHE_DIR, f"{user_id}_{source_type}_topics.json")
     
-    # 1. Check Cache
+    # 1. Controlla Cache
     if os.path.exists(cache_file):
         try:
             with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            return data, True # True indicates cached
+            return data, True # True indica cached
         except Exception as e:
             st.error(f"Error loading cache: {e}")
             
-    # 2. Call API if no cache
+    # 2. Chiama API se no cache
     if not api_key:
         return None, False
         
@@ -83,17 +83,17 @@ def extract_topics(user_id, text, api_key, source_type="posts"):
                 {"role": "system", "content": "You are an expert assistant for topic extraction. Output valid JSON only."},
                 {"role": "user", "content": prompt}
             ],
-            response_format={ "type": "json_object" } # Force JSON output
+            response_format={ "type": "json_object" } # Forza output JSON
         )
         
         content = response.choices[0].message.content
         data = json.loads(content)
         
-        # 3. Save to Cache
+        # 3. Salva in Cache
         with open(cache_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
             
-        return data, False # False indicates fresh from API
+        return data, False # False indica fresco da API
         
     except Exception as e:
         st.error(f"Error calling OpenAI API: {e}")

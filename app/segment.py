@@ -4,9 +4,9 @@ import os
 import json
 import data
 
-# --- 3. Segmentation Logic (Top-Down Piecewise Linear) ---
+# --- 3. Logica Segmentazione (Top-Down Piecewise Linear) ---
 def point_line_distance(x0, y0, x1, y1, x2, y2):
-    """Distance from point (x0,y0) to line passing through (x1,y1) and (x2,y2)."""
+    """Distanza dal punto (x0,y0) alla linea passante per (x1,y1) e (x2,y2)."""
     num = abs((y2 - y1)*x0 - (x2 - x1)*y0 + x2*y1 - y2*x1)
     den = np.sqrt((y2 - y1)**2 + (x2 - x1)**2)
     if den == 0:
@@ -14,7 +14,7 @@ def point_line_distance(x0, y0, x1, y1, x2, y2):
     return num / den
 
 def get_segment_error(dates_num, scores, i_start, i_end):
-    """Finds the point with max distance from the line segment."""
+    """Trova il punto con distanza massima dal segmento di linea."""
     if i_end <= i_start + 1:
         return 0.0, None
     
@@ -37,10 +37,10 @@ def get_segment_error(dates_num, scores, i_start, i_end):
 @st.cache_data
 def segment_time_series(series, k_segments=10):
     """
-    Splits the time series into K linear segments using Top-Down approach. Uses disk cache.
+    Divide la serie temporale in K segmenti lineari usando approccio Top-Down. Usa cache su disco.
     """
-    # We need a user_id here. Since series doesn't have it, we might need a better key.
-    # But for now, let's assume if this is called from app.py, we might have it or we hash the series
+    # Abbiamo bisogno di uno user_id qui. Poiché series non ce l'ha, potremmo aver bisogno di una chiave migliore.
+    # Ma per ora, assumiamo che se chiamato da app.py, potremmo averlo o facciamo hash della serie
     import hashlib
     series_sig = hashlib.md5(str(series.values).encode()).hexdigest()[:10]
     
@@ -57,7 +57,7 @@ def segment_time_series(series, k_segments=10):
         return []
     
     dates = series.index
-    # Convert dates to numeric (days since start) for geometry calc
+    # Converti date in numerico (giorni dall'inizio) per calcolo geometria
     x = (dates - dates.min()).days.values.astype(float)
     y = series.values.astype(float)
     n = len(x)
@@ -98,7 +98,7 @@ def segment_time_series(series, k_segments=10):
             'end_val': float(y[end])
         })
     
-    # Save to disk
+    # Salva su disco
     try:
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=4)

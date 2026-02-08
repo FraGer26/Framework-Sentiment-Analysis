@@ -4,7 +4,7 @@ import streamlit as st
 import hashlib
 import json
 
-# --- Cache Configuration ---
+# --- Configurazione Cache ---
 CACHE_BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache", "calculation")
 DATA_CACHE_DIR = os.path.join(CACHE_BASE_DIR, "data")
 EMA_CACHE_DIR = os.path.join(CACHE_BASE_DIR, "ema")
@@ -14,26 +14,26 @@ GLOBAL_CACHE_DIR = os.path.join(CACHE_BASE_DIR, "global")
 for d in [DATA_CACHE_DIR, EMA_CACHE_DIR, SEGMENT_CACHE_DIR, GLOBAL_CACHE_DIR]:
     os.makedirs(d, exist_ok=True)
 
-# --- 1. Data Loader ---
+# --- 1. Caricamento Dati ---
 @st.cache_data
 def load_data(file_input):
     """
-    Loads the classification output data.
-    Input can be a file path (str) or an UploadedFile object.
-    Expects columns: Subject ID, Chunk, Date, Text, Prob_Severe_Depressed, Prob_Moderate_Depressed
+    Carica i dati di output della classificazione.
+    L'input può essere un percorso file (str) o un oggetto UploadedFile.
+    Colonne attese: Subject ID, Chunk, Date, Text, Prob_Severe_Depressed, Prob_Moderate_Depressed
     """
     if isinstance(file_input, str):
         if not os.path.exists(file_input):
             return None
         df = pd.read_csv(file_input)
     else:
-        # It's an UploadedFile object
+        # È un oggetto UploadedFile
         df = pd.read_csv(file_input)
     
-    # Standardize column names if necessary (trim whitespace)
+    # Standardizza nomi colonne se necessario (rimuove spazi)
     df.columns = df.columns.str.strip()
     
-    # Convert Date
+    # Converti Data
     if 'Date' in df.columns:
         df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
     
@@ -41,12 +41,12 @@ def load_data(file_input):
 
 @st.cache_data
 def get_subject_ids(df):
-    """Returns unique subject IDs from the dataframe."""
+    """Restituisce subject ID unici dal dataframe."""
     return df["Subject ID"].unique()
 
 @st.cache_data
 def get_user_data(df, selected_user):
-    """Returns a copy of the dataframe filtered by user ID. Uses disk cache."""
+    """Restituisce una copia del dataframe filtrata per ID utente. Usa cache su disco."""
     cache_path = os.path.join(DATA_CACHE_DIR, f"user_{selected_user}.csv")
     
     if os.path.exists(cache_path):
@@ -57,7 +57,7 @@ def get_user_data(df, selected_user):
             
     user_data = df[df["Subject ID"] == selected_user].copy()
     
-    # Save to disk
+    # Salva su disco
     try:
         user_data.to_csv(cache_path, index=False)
     except:
@@ -67,10 +67,10 @@ def get_user_data(df, selected_user):
 
 @st.cache_data
 def calculate_daily_risk(user_df):
-    """Calculates daily mean risk scores (2*Severe + Moderate). Uses disk cache."""
-    # Create a unique ID for the user data to cache result
-    # We use user_id if we have it, but here we only have the DF.
-    # Let's assume user_df has a 'Subject ID' column.
+    """Calcola punteggi di rischio medio giornaliero (2*Severe + Moderate). Usa cache su disco."""
+    # Crea un ID unico per i dati utente per cache risultato
+    # Usiamo user_id se lo abbiamo, ma qui abbiamo solo il DF.
+    # Assumiamo che user_df abbia una colonna 'Subject ID'.
     user_id = "unknown"
     if not user_df.empty and "Subject ID" in user_df.columns:
         user_id = str(user_df["Subject ID"].iloc[0])
@@ -94,9 +94,9 @@ def calculate_daily_risk(user_df):
     df["raw_risk"] = 2 * df["Prob_Severe_Depressed"] + df["Prob_Moderate_Depressed"]
     daily_means = df.groupby(df["Date"].dt.date)["raw_risk"].mean().sort_index()
     
-    # Save to disk
+    # Salva su disco
     try:
-        # Save as JSON (index as strings)
+        # Salva come JSON (indice come stringhe)
         out_dict = {str(k): float(v) for k, v in daily_means.to_dict().items()}
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(out_dict, f, indent=4)
