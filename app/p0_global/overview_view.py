@@ -7,9 +7,11 @@ def render_global_overview(user_data):
     # Istogramma semplice dei post nel tempo
     daily_counts = user_data.groupby(user_data["Date"].dt.date).size()
     fig_activity = go.Figure(data=[
-        go.Bar(x=daily_counts.index, y=daily_counts.values, name="Posts")
+        go.Bar(x=daily_counts.index, y=daily_counts.values, name="Posts",
+               marker_color='black', marker_line_color='black', marker_line_width=1)
     ])
-    fig_activity.update_layout(xaxis_title="Date", yaxis_title="Number of Posts", template="plotly_white")
+    fig_activity.update_layout(xaxis_title="Date", yaxis_title="Number of Posts", template="plotly_white",
+                               bargap=0.1)
     st.plotly_chart(fig_activity, use_container_width=True)
     
     st.subheader("Recent Posts")

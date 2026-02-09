@@ -10,12 +10,16 @@ from pyspark.sql.functions import col, date_format, to_date, count, avg, desc
 from pyspark.sql.types import StructType, StructField, StringType, FloatType
 
 def get_spark_session():
-    # Usa 4GB di memoria driver per gestire "pd.toPandas()" se necessario, anche se lo evitiamo per i big data
-    # "local[*]" usa tutti i core
+    import os
+    # Imposta opzioni JVM per compatibilità Java 17+
+    os.environ['SPARK_SUBMIT_OPTS'] = '--add-opens java.base/javax.security.auth=ALL-UNNAMED'
+    os.environ['PYSPARK_SUBMIT_ARGS'] = '--conf spark.driver.extraJavaOptions="--add-opens java.base/javax.security.auth=ALL-UNNAMED" pyspark-shell'
+    
     return SparkSession.builder \
         .appName("RedditAnalyticsApp") \
         .master("local[*]") \
         .config("spark.driver.memory", "4g") \
+        .config("spark.driver.extraJavaOptions", "--add-opens java.base/javax.security.auth=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED") \
         .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
         .config("spark.executor.heartbeatInterval", "100s") \
         .config("spark.network.timeout", "300s") \

@@ -1,11 +1,12 @@
 import streamlit as st
+import re
 from p0_global import data
 from p2_narrative_report import report_base, report_trajectory
 
 def render_trajectory_section(selected_user, user_data, segments, api_key):
     
     base_data = report_base.load_base_report(selected_user)
-    traj_data = report_trajectoryre.load_trajectory_report(selected_user)
+    traj_data = report_trajectory.load_trajectory_report(selected_user)
     is_traj_cached = (base_data is not None) and (traj_data is not None)
     
     if is_traj_cached:

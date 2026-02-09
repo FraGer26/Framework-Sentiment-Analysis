@@ -18,7 +18,7 @@ def render_clustering_section(selected_user, user_data):
     else:
         cluster_col1, cluster_col2 = st.columns([1,3])
         with cluster_col1:
-            cluster_source = st.selectbox("Source Text", ["Raw Posts"], key="cluster_source")
+            cluster_source = "Raw Posts"  # Valore fisso, rimosso selectbox
             # Firma aggiornata per pipeline manuale
             current_sig = "manual_umap_n40_c5_d0_s42__hdbscan_m35_predT_mpnet" 
             
