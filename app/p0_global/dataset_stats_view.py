@@ -14,8 +14,11 @@ def render_dataset_statistics(df, api_key):
     cache_avgs_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_avgs.json")
     cache_time_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_time.json")
     cache_top_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_top_users.json")
+    cache_weekday_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_weekday.json")
+    cache_length_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_length.json")
+    cache_correlation_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_correlation.json")
     
-    # Controlla esistenza cache
+    # Controlla esistenza cache base
     caches_exist = (
         os.path.exists(cache_metrics_path) and 
         os.path.exists(cache_avgs_path) and 
@@ -29,13 +32,23 @@ def render_dataset_statistics(df, api_key):
     avgs_df = None
     time_df = None
     top_activity = None
+    weekday_df = None
+    length_df = None
+    correlation_df = None
     
     if caches_exist and not recalc:
         try:
             metrics_df = pd.read_json(cache_metrics_path)
             avgs_df = pd.read_json(cache_avgs_path)
-            time_df = pd.read_json(cache_time_path).sort_values("MonthDate") # JSON might lose order
+            time_df = pd.read_json(cache_time_path).sort_values("MonthDate")
             top_activity = pd.read_json(cache_top_path)
+            # Carica nuove analytics dalla cache
+            if os.path.exists(cache_weekday_path):
+                weekday_df = pd.read_json(cache_weekday_path)
+            if os.path.exists(cache_length_path):
+                length_df = pd.read_json(cache_length_path)
+            if os.path.exists(cache_correlation_path):
+                correlation_df = pd.read_json(cache_correlation_path)
             st.success("Loaded statistics from cache.")
         except Exception as e:
             st.warning(f"Cache load failed: {e}. Recalculating...")
@@ -43,11 +56,11 @@ def render_dataset_statistics(df, api_key):
 
     if not caches_exist or recalc:
         with st.spinner("Initializing Spark and calculating statistics... (This may take a moment)"):
-             metrics_df, avgs_df, time_df, top_activity = general_statistics.compute_global_stats(df)
+             metrics_df, avgs_df, time_df, top_activity, weekday_df, length_df, correlation_df = general_statistics.compute_global_stats(df)
              st.success("Statistics calculated and cached.")
     
     # Tab per organizzazione
-    tab1, tab2, tab3 = st.tabs(["📊 General Overview", "🏆 Rankings & Risk", "⚖️ GPT Evaluation"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 General Overview", "🏆 Rankings & Risk", "📅 New Analytics", "⚖️ GPT Evaluation"])
     
     with tab1:
         # 1. Metriche Utente
@@ -137,6 +150,42 @@ def render_dataset_statistics(df, api_key):
                      st.info("Rankings not cached. Click to calculate.")
     
     with tab3:
+        st.markdown("### 📅 Attività per Giorno della Settimana")
+        if weekday_df is not None and not weekday_df.empty:
+            fig_wd = go.Figure(data=[
+                go.Bar(x=weekday_df['DayName'], y=weekday_df['Posts'], name='Posts', marker_color='steelblue')
+            ])
+            fig_wd.update_layout(xaxis_title="Giorno", yaxis_title="Numero Post", template="plotly_white")
+            st.plotly_chart(fig_wd, use_container_width=True)
+        else:
+            st.info("Dati non disponibili. Clicca 'Recalculate' per generarli.")
+        
+        st.markdown("---")
+        st.markdown("### 📏 Statistiche Lunghezza Post")
+        if length_df is not None and not length_df.empty:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("📊 Media Caratteri", f"{length_df['Avg_Length'].iloc[0]:.0f}")
+            c2.metric("📉 Min Caratteri", f"{length_df['Min_Length'].iloc[0]}")
+            c3.metric("📈 Max Caratteri", f"{length_df['Max_Length'].iloc[0]}")
+        else:
+            st.info("Dati non disponibili.")
+        
+        st.markdown("---")
+        st.markdown("### 🔗 Correlazione Attività-Rischio (Top 20)")
+        if correlation_df is not None and not correlation_df.empty:
+            st.dataframe(correlation_df, use_container_width=True)
+            fig_corr = go.Figure(data=[
+                go.Scatter(x=correlation_df['Post_Count'], y=correlation_df['Avg_Prob_Severe_Depressed'], 
+                           mode='markers', marker=dict(size=10, color='darkred'),
+                           text=correlation_df['Subject_ID'], hoverinfo='text+x+y')
+            ])
+            fig_corr.update_layout(xaxis_title="Numero Post", yaxis_title="Avg Prob Severe Depressed", 
+                                   title="Scatter: Attività vs Rischio", template="plotly_white")
+            st.plotly_chart(fig_corr, use_container_width=True)
+        else:
+            st.info("Dati non disponibili.")
+    
+    with tab4:
         # 5. Valutatore GPT
         st.caption("Average scores from blinded Trajectory vs Base evaluations.")
         

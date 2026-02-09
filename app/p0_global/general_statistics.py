@@ -68,7 +68,30 @@ def compute_global_stats(df):
     top_activity = queries.get_top_active_users_df(sdf).toPandas()
     top_activity.to_json(cache_top_path)
     
-    return metrics_df, avgs_df, time_df, top_activity
+    # --- NUOVE ANALYTICS CON CACHE ---
+    cache_weekday_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_weekday.json")
+    cache_length_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_length.json")
+    cache_correlation_path = os.path.join(data.GLOBAL_CACHE_DIR, "global_correlation.json")
+    
+    # 5. Attività per Giorno Settimana
+    weekday_df = None
+    if 'Date' in df.columns:
+        weekday_df = queries.get_weekday_activity_df(sdf).toPandas()
+        day_names = {1: 'Dom', 2: 'Lun', 3: 'Mar', 4: 'Mer', 5: 'Gio', 6: 'Ven', 7: 'Sab'}
+        weekday_df['DayName'] = weekday_df['DayOfWeek'].map(day_names)
+        weekday_df.to_json(cache_weekday_path)
+    
+    # 6. Statistiche Lunghezza Post
+    length_df = queries.get_post_length_stats_df(sdf).toPandas()
+    length_df.to_json(cache_length_path)
+    
+    # 7. Correlazione Attività-Rischio
+    correlation_df = None
+    if 'Prob_Severe_Depressed' in df.columns:
+        correlation_df = queries.get_activity_risk_correlation_df(sdf).toPandas()
+        correlation_df.to_json(cache_correlation_path)
+    
+    return metrics_df, avgs_df, time_df, top_activity, weekday_df, length_df, correlation_df
 
 def compute_risk_rankings(df, half_life=15):
     """
