@@ -28,7 +28,7 @@ def render_dataset_statistics(df, api_key):
         api_key (str): Chiave API OpenAI per le valutazioni GPT
     """
     # Titolo principale della sezione
-    st.subheader("🌍 Global Dataset Statistics (Powered by Spark SQL)")
+    st.subheader("🌍 Global Dataset Statistics")
     
     # ==========================================================================
     # DEFINIZIONE PERCORSI CACHE
