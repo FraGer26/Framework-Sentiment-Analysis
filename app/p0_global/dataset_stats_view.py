@@ -6,7 +6,7 @@ from p0_global import data, general_statistics
 from p3_llm_judge import gpt_evaluator
 
 def render_dataset_statistics(df, api_key):
-    st.subheader("🌍 Global Dataset Statistics (Powered by Spark SQL)")
+    st.subheader("🌍 Global Dataset Statistics")
     
     # --- Percorsi Cache ---
     # Accesso dal modulo data (costanti centralizzate presunte)
