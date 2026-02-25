@@ -16,6 +16,7 @@ for d in [DATA_CACHE_DIR, EMA_CACHE_DIR, SEGMENT_CACHE_DIR, GLOBAL_CACHE_DIR]:
 
 # --- 1. Caricamento Dati ---
 @st.cache_data
+
 def load_data(file_input):
     """
     Carica i dati di output della classificazione.

@@ -60,7 +60,7 @@ def render_dataset_statistics(df, api_key):
              st.success("Statistics calculated and cached.")
     
     # Tab per organizzazione
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 General Overview", "🏆 Rankings & Risk", "📅 New Analytics", "⚖️ GPT Evaluation"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 General Overview", "🏆 Rankings & Risk", "📅 Other Analytics", "⚖️ GPT Evaluation"])
     
     with tab1:
         # 1. Metriche Utente

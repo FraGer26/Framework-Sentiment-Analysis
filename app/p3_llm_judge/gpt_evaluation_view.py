@@ -4,6 +4,7 @@ from p3_llm_judge import gpt_evaluator
 import os
 import pandas as pd
 
+
 def render_gpt_evaluation(selected_user, api_key):
 
     st.caption("Compare 'Narrative Base' vs 'Narrative Trajectory' using an LLM Judge.")
@@ -100,3 +101,4 @@ def render_gpt_evaluation(selected_user, api_key):
             })
             
         st.table(pd.DataFrame(table_data))
+        
